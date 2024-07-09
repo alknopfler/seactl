@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/alknopfler/seactl/pkg/airgap"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,7 @@ func NewAirGapCommand() *cobra.Command {
 		Use:   "generate",
 		Short: "Command to generate the air-gap artifacts from the release manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
+			return airgap.GenerateAirGap()
 		},
 	}
 	// Add flags

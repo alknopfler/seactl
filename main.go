@@ -28,7 +28,7 @@ func newCommand() *cobra.Command {
 			"- Read the SUSE Edge release manifest (from input file)\n" +
 			"- Save artifacts to a tarball\n" +
 			"- Login to a private registry\n" +
-			"- Upload and preload the private registry with the artifcats\n",
+			"- Upload and preload the private registry with the artifacts\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 			os.Exit(0)
