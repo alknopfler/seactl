@@ -15,12 +15,17 @@ type ReleaseManifest struct {
 			Rke2 struct {
 				Version string `yaml:"version"`
 			} `yaml:"rke2"`
+			K3S struct {
+				Version string `yaml:"version"`
+			} `yaml:"k3s"`
 		} `yaml:"kubernetes"`
-		Longhorn struct {
-			Version   string `yaml:"version"`
-			Location  string `yaml:"location"`
-			Namespace string `yaml:"namespace"`
-		} `yaml:"longhorn"`
+		Helm []struct {
+			Longhorn struct {
+				Version   string `yaml:"version"`
+				Location  string `yaml:"location"`
+				Namespace string `yaml:"namespace"`
+			} `yaml:"longhorn"`
+		} `yaml:"helm"`
 		Images []struct {
 			Name     string `yaml:"name"`
 			Version  string `yaml:"version"`

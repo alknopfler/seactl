@@ -10,10 +10,13 @@ components:
   kubernetes:
     rke2:
       version: v1.28.9+rke2r1
-  longhorn:
-    version: 1.6.1
-    location: <chart_location_url>
-    namespace: longhorn-system
+    k3s:
+      version: v1.21.5+k3s1
+  helm:
+    - longhorn:
+      version: 1.6.1
+      location: <chart_location_url>
+      namespace: longhorn-system
   images:
     - name: <image_name>
       version: <image_version>
