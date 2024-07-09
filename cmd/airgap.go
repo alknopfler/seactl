@@ -20,7 +20,10 @@ func NewAirGapCommand() *cobra.Command {
 		Use:   "generate",
 		Short: "Command to generate the air-gap artifacts from the release manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return airgap.GenerateAirGap()
+			if registryURL != "" {
+				return airgap.PreloadAirGapToRegistry(releaseManifestFile, registryUsername, registryPassword, registryURL, registryCACert)
+			}
+			return airgap.GenerateAirGap(releaseManifestFile, outputTarball)
 		},
 	}
 	// Add flags
