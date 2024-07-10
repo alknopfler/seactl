@@ -85,7 +85,7 @@ components:
 		if manifest.Components.Kubernetes.Rke2.Version != "v1.20.0" {
 			t.Errorf("expected kubernetes rke2 version v1.20.0, got %v", manifest.Components.Kubernetes.Rke2.Version)
 		}
-		if manifest.Components.Helm[0].Longhorn.Version != "v1.0.0" || manifest.Components.Helm[0].Longhorn.Location != "http://example.com" || manifest.Components.Helm[0].Longhorn.Namespace != "longhorn-system" {
+		if manifest.Components.Helm[0].Version != "v1.0.0" || manifest.Components.Helm[0].Location != "http://example.com" || manifest.Components.Helm[0].Namespace != "longhorn-system" {
 			t.Errorf("expected longhorn with version v1.0.0, location http://example.com, and namespace longhorn-system, got %v", manifest.Components.Helm)
 		}
 		if len(manifest.Components.Images) != 1 || manifest.Components.Images[0].Name != "nginx" || manifest.Components.Images[0].Version != "1.19.6" || manifest.Components.Images[0].Location != "docker.io/nginx:1.19.6" {

@@ -20,11 +20,10 @@ type ReleaseManifest struct {
 			} `yaml:"k3s"`
 		} `yaml:"kubernetes"`
 		Helm []struct {
-			Longhorn struct {
-				Version   string `yaml:"version"`
-				Location  string `yaml:"location"`
-				Namespace string `yaml:"namespace"`
-			} `yaml:"longhorn"`
+			Name      string `yaml:"name"`
+			Version   string `yaml:"version"`
+			Location  string `yaml:"location"`
+			Namespace string `yaml:"namespace"`
 		} `yaml:"helm"`
 		Images []struct {
 			Name     string `yaml:"name"`

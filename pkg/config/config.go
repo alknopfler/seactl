@@ -60,10 +60,20 @@ func validateReleaseManifest(manifest *ReleaseManifest) error {
 		log.Printf("kubernetes rke2 version is missing")
 		return errors.New("kubernetes rke2 version is missing")
 	}
+	for i, helm := range manifest.Components.Helm {
+		if helm.Name == "" || helm.Version == "" || helm.Location == "" || helm.Namespace == "" {
+			log.Printf("helm %d has missing fields", i+1)
+			return errors.New("helm has missing fields")
+		}
+		if helm.Location != "" && helm.Location[:3] != "oci" {
+			log.Printf("helm %d location is not an OCI registry", i+1)
+			return errors.New("helm location is not an OCI registry")
+		}
+	}
 	for i, img := range manifest.Components.Images {
 		if img.Name == "" || img.Version == "" || img.Location == "" {
-			log.Printf("image %d has missing fields", i+1)
-			return errors.New("image has missing fields")
+			log.Printf("images %d has missing fields", i+1)
+			return errors.New("images has missing fields")
 		}
 	}
 	return nil

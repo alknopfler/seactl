@@ -1,4 +1,4 @@
-package airgap
+package rke2
 
 import (
 	"fmt"
@@ -33,6 +33,13 @@ type RKE2 struct {
 	OutputDirTarball string
 }
 
+func New(version, outputDirTarball string) *RKE2 {
+	return &RKE2{
+		Version:          version,
+		OutputDirTarball: outputDirTarball,
+	}
+}
+
 func (r *RKE2) Download() error {
 	// Create the destination directory if it doesn't exist
 	if err := os.MkdirAll(r.OutputDirTarball, os.ModePerm); err != nil {
@@ -48,14 +55,14 @@ func (r *RKE2) Download() error {
 		// Download the file
 		resp, err := http.Get(RKE2ReleaseURL + replaceVersionLink(r.Version) + "/" + image)
 		if err != nil {
-			log.Printf("failed to download the image: %v", err)
+			log.Printf("failed to download the images: %v", err)
 			return err
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("failed to download the image: HTTP status %s", resp.Status)
-			return fmt.Errorf("failed to download the image: HTTP status %s", resp.Status)
+			log.Printf("failed to download the images: HTTP status %s", resp.Status)
+			return fmt.Errorf("failed to download the images: HTTP status %s", resp.Status)
 		}
 
 		// Create the file
@@ -86,6 +93,12 @@ func (r *RKE2) Verify() error {
 		}
 		log.Printf("Image verified successfully: %s", filePath)
 	}
+	return nil
+}
+
+func (r *RKE2) Upload() error {
+	// Upload the tarball files to the registry
+	// TODO: implement me if needed (prepared if we change the airgap with rke2-capi-provider to use registry instead of artifacts)
 	return nil
 }
 

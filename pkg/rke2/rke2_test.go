@@ -1,4 +1,4 @@
-package airgap
+package rke2
 
 import "testing"
 

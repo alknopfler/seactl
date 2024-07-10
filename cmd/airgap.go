@@ -11,6 +11,7 @@ var (
 	registryPassword    string
 	registryURL         string
 	registryCACert      string
+	registryInsecure    bool
 	outputDirTarball    string
 )
 
@@ -20,10 +21,7 @@ func NewAirGapCommand() *cobra.Command {
 		Use:   "generate",
 		Short: "Command to generate the air-gap artifacts from the release manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if registryURL != "" {
-				return airgap.PreloadAirGapToRegistry(releaseManifestFile, registryUsername, registryPassword, registryURL, registryCACert)
-			}
-			return airgap.GenerateAirGapToTarball(releaseManifestFile, outputDirTarball)
+			return airgap.GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryUsername, registryPassword, registryCACert, outputDirTarball, registryInsecure)
 		},
 	}
 	// Add flags
@@ -33,10 +31,12 @@ func NewAirGapCommand() *cobra.Command {
 	flags.StringVarP(&registryPassword, "registry-password", "p", "", "Registry Password")
 	flags.StringVarP(&registryURL, "registry-url", "r", "", "Registry URL")
 	flags.StringVarP(&registryCACert, "registry-cacert", "c", "", "Registry CA Certificate file")
+	flags.BoolVarP(&registryInsecure, "insecure", "k", true, "Skip TLS verification in registry")
 	flags.StringVarP(&outputDirTarball, "output", "o", "", "Output directory to store the tarball files")
 	// add options and required flags
 	c.MarkFlagRequired("input")
-	c.MarkFlagsOneRequired("output", "registry-url")
-	c.MarkFlagsMutuallyExclusive("output", "registry-url")
+	c.MarkFlagRequired("output")
+	c.MarkFlagRequired("registry-url")
+
 	return c
 }
