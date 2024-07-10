@@ -5,25 +5,22 @@ import (
 	"github.com/alknopfler/seactl/pkg/config"
 )
 
-var (
-	rke2 = RKE2{}
-	file string
-)
-
 type Downloader interface {
 	Download() (string, error)
 	Verify() error
 }
 
-func GenerateAirGap(releaseManifestFile, outputTarball string) error {
+func GenerateAirGap(releaseManifestFile, outputDirTarball string) error {
 	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
 	if err != nil {
 		return err
 	}
+	rke2 := &RKE2{
+		Version:          releaseManifest.Components.Kubernetes.Rke2.Version,
+		OutputDirTarball: outputDirTarball,
+	}
 
-	rke2.Version = releaseManifest.Components.Kubernetes.Rke2.Version
-
-	file, err = rke2.Download()
+	err = rke2.Download()
 	if err != nil {
 		return err
 	}

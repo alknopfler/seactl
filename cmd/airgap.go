@@ -11,7 +11,7 @@ var (
 	registryPassword    string
 	registryURL         string
 	registryCACert      string
-	outputTarball       string
+	outputDirTarball    string
 )
 
 func NewAirGapCommand() *cobra.Command {
@@ -23,7 +23,7 @@ func NewAirGapCommand() *cobra.Command {
 			if registryURL != "" {
 				return airgap.PreloadAirGapToRegistry(releaseManifestFile, registryUsername, registryPassword, registryURL, registryCACert)
 			}
-			return airgap.GenerateAirGap(releaseManifestFile, outputTarball)
+			return airgap.GenerateAirGap(releaseManifestFile, outputDirTarball)
 		},
 	}
 	// Add flags
@@ -33,7 +33,7 @@ func NewAirGapCommand() *cobra.Command {
 	flags.StringVarP(&registryPassword, "registry-password", "p", "", "Registry Password")
 	flags.StringVarP(&registryURL, "registry-url", "r", "", "Registry URL")
 	flags.StringVarP(&registryCACert, "registry-cacert", "c", "", "Registry CA Certificate file")
-	flags.StringVarP(&outputTarball, "output", "o", "", "Output tarball file")
+	flags.StringVarP(&outputDirTarball, "output", "o", "", "Output directory to store the tarball files")
 	// add options and required flags
 	c.MarkFlagRequired("input")
 	c.MarkFlagsOneRequired("output", "registry-url")
