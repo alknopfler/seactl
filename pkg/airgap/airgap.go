@@ -2,7 +2,9 @@ package airgap
 
 import (
 	"fmt"
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/pkg/config"
+	"log"
 )
 
 type Downloader interface {
@@ -10,7 +12,7 @@ type Downloader interface {
 	Verify() error
 }
 
-func GenerateAirGap(releaseManifestFile, outputDirTarball string) error {
+func GenerateAirGapToTarball(releaseManifestFile, outputDirTarball string) error {
 	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
 	if err != nil {
 		return err
@@ -20,6 +22,7 @@ func GenerateAirGap(releaseManifestFile, outputDirTarball string) error {
 		OutputDirTarball: outputDirTarball,
 	}
 
+	log.Printf("Starting to download RKE2 images to the output directory %s. This may take a while...", outputDirTarball)
 	err = rke2.Download()
 	if err != nil {
 		return err
@@ -29,6 +32,7 @@ func GenerateAirGap(releaseManifestFile, outputDirTarball string) error {
 	if err != nil {
 		return err
 	}
+	log.Println(color.InGreen("RKE2 Images downloaded and verified successfully! you can find them in the output directory: " + outputDirTarball))
 
 	return nil
 }

@@ -23,7 +23,7 @@ func NewAirGapCommand() *cobra.Command {
 			if registryURL != "" {
 				return airgap.PreloadAirGapToRegistry(releaseManifestFile, registryUsername, registryPassword, registryURL, registryCACert)
 			}
-			return airgap.GenerateAirGap(releaseManifestFile, outputDirTarball)
+			return airgap.GenerateAirGapToTarball(releaseManifestFile, outputDirTarball)
 		},
 	}
 	// Add flags

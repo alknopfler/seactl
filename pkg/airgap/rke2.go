@@ -84,6 +84,7 @@ func (r *RKE2) Verify() error {
 			log.Printf("file does not exist: %s", filePath)
 			return err
 		}
+		log.Printf("Image verified successfully: %s", filePath)
 	}
 	return nil
 }
