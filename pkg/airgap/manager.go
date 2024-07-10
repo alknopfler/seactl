@@ -62,7 +62,7 @@ func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registr
 	for _, value := range releaseManifest.Components.Helm {
 
 		h := helm.New(value.Name, value.Version, value.Location, reg)
-		err := h.RegistryLogin(reg)
+		err := reg.RegistryHelmLogin()
 		if err != nil {
 			return err
 		}

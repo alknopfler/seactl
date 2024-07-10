@@ -70,26 +70,3 @@ func (h *Helm) Upload() error {
 	defer os.Remove(tempDir)
 	return nil
 }
-
-func (h *Helm) RegistryLogin(reg *registry.Registry) error {
-	var args []string
-	args = append(args, "registry", "login", reg.RegistryURL)
-
-	if reg.RegistryUsername != "" && reg.RegistryPassword != "" {
-		args = append(args, "--username", reg.RegistryUsername, "--password", reg.RegistryPassword)
-	}
-
-	if reg.RegistryInsecure {
-		args = append(args, "--insecure")
-	} else if reg.RegistryCACert != "" {
-		args = append(args, "--ca-file", reg.RegistryCACert)
-	}
-	cmd := exec.Command("helm", args...)
-	err := cmd.Run()
-
-	if err != nil {
-		log.Printf("failed to login to the registry: %s", err)
-		return err
-	}
-	return nil
-}
