@@ -1,6 +1,6 @@
 apiVersion: 1.0
 releaseVersion: 3.0.1
-supoortedUpgrades:
+suportedUpgrades:
   - 3.0.0
   - 3.0.1
 components:

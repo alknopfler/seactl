@@ -2,10 +2,10 @@ package config
 
 // ReleaseManifest is the struct that represents the release manifest
 type ReleaseManifest struct {
-	APIVersion        float64  `yaml:"apiVersion"`
-	ReleaseVersion    string   `yaml:"releaseVersion"`
-	SupoortedUpgrades []string `yaml:"supoortedUpgrades"`
-	Components        struct {
+	APIVersion       float64  `yaml:"apiVersion"`
+	ReleaseVersion   string   `yaml:"releaseVersion"`
+	SuportedUpgrades []string `yaml:"suportedUpgrades"`
+	Components       struct {
 		OperatingSystem struct {
 			Upgrade struct {
 				Version string `yaml:"version"`
