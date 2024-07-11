@@ -45,3 +45,8 @@ func (r *Registry) RegistryHelmLogin() error {
 	}
 	return nil
 }
+
+func (r *Registry) RegistryPodmanLogin() error {
+	//Using bindings for podman login
+
+}
