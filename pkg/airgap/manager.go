@@ -21,7 +21,7 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	fatalErrors := make(chan error)
 	wgDone := make(chan bool)
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(3)
 
 	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
 	if err != nil {
