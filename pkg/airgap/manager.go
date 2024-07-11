@@ -7,6 +7,7 @@ import (
 	"github.com/alknopfler/seactl/pkg/registry"
 	"github.com/alknopfler/seactl/pkg/rke2"
 	"log"
+	"sync"
 )
 
 type Manager interface {
@@ -15,25 +16,53 @@ type Manager interface {
 	Upload() error
 }
 
-func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryUsername, registryPassword, registryCACert, outputDirTarball string, insecure bool) error {
+func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFile, registryCACert, outputDirTarball string, insecure bool) error {
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
 	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
 	if err != nil {
 		return err
 	}
 
-	reg := registry.New(registryUsername, registryPassword, registryURL, registryCACert, insecure)
+	reg := registry.New(registryAuthFile, registryURL, registryCACert, insecure)
 
 	// RKE2 Artifacts
-	//err = generateRKE2Artifacts(releaseManifest, outputDirTarball)
-	//if err != nil {
-	//	return err
-	//}
+	go func() {
+		err = generateRKE2Artifacts(releaseManifest, outputDirTarball)
+		if err != nil {
+			fatalErrors <- err
+		}
+		wg.Done()
+	}()
 
 	// Helm Charts Artifacts to be uploaded to registry
+	go func() {
+		err = generateHelmArtifacts(releaseManifest, reg)
+		if err != nil {
+			fatalErrors <- err
+		}
+		wg.Done()
+	}()
 
-	err = generateHelmArtifacts(releaseManifest, reg)
+	// Wait until all the goroutines are done
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
 
+	// Wait until either WaitGroup is done or an error is received through the channel
+	select {
+	case <-wgDone:
+		// carry on
+		break
+	case err = <-fatalErrors:
+		close(fatalErrors)
+		log.Fatal("Error found running the program: ", err)
+		return err
+	}
 	return nil
 }
 
