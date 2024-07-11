@@ -18,7 +18,13 @@ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
 ## Usage
 
-1.If your private registry is auth based, create your own registry auth file with the following format:
+Clone the repository and build the tool using the following command:
+
+```shell
+make compile
+```
+
+1. If your private registry is auth based, create your own registry auth file with the following format:
 
 ```txt
 <username_bas64encoded>:<password_base64encoded>
@@ -30,7 +36,7 @@ The following command can be used to generate the airgap artifacts
 
 ```bash
 Usage:
-suse-edge-airgap generate [flags]
+seactl generate [flags]
 
 Flags:
 -h, --help                       help for generate
