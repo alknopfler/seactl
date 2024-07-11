@@ -4,6 +4,7 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/pkg/config"
 	"github.com/alknopfler/seactl/pkg/helm"
+	"github.com/alknopfler/seactl/pkg/images"
 	"github.com/alknopfler/seactl/pkg/registry"
 	"github.com/alknopfler/seactl/pkg/rke2"
 	"log"
@@ -20,7 +21,7 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	fatalErrors := make(chan error)
 	wgDone := make(chan bool)
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
 	if err != nil {
@@ -41,6 +42,15 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	// Helm Charts Artifacts to be uploaded to registry
 	go func() {
 		err = generateHelmArtifacts(releaseManifest, reg)
+		if err != nil {
+			fatalErrors <- err
+		}
+		wg.Done()
+	}()
+
+	// Images Artifacts to be uploaded to registry
+	go func() {
+		err = generateImagesArtifacts(releaseManifest, reg)
 		if err != nil {
 			fatalErrors <- err
 		}
@@ -121,6 +131,44 @@ func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registr
 
 	}
 	log.Println(color.InGreen("Helm Chart artifacts pre-loaded in registry successfully!"))
+	return nil
+}
+
+func generateImagesArtifacts(releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
+	// Images Artifacts to be uploaded to registry
+	for _, value := range releaseManifest.Components.Images {
+
+		image := images.New(value.Name, value.Version, value.Location, reg)
+		err := reg.RegistryLogin()
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Starting to download images %s. This may take a while...", value)
+		err = image.Download()
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Starting to verify images %s. This may take a while...", value)
+		err = image.Verify()
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Starting to upload images %s to the registry %s This may take a while...", value, reg.RegistryURL)
+		if reg.RegistryInsecure {
+			image.Insecure = true
+		}
+		err = image.Upload()
+		if err != nil {
+			return err
+		}
+
+		log.Println("Images %s prepared and uploaded successfully!", value)
+
+	}
+	log.Println(color.InGreen("Images artifacts pre-loaded in registry successfully!"))
 	return nil
 
 }

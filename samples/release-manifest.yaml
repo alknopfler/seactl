@@ -18,6 +18,6 @@ components:
       location: oci://registry.suse.com/edge/
       namespace: sriov-network-operator
   images:
-    - name: <image_name>
-      version: <image_version>
-      location: <image_location_url>
+    - name: hardened-sriov-network-operator
+      version: v1.2.0-build20240327
+      location: docker.io/rancher

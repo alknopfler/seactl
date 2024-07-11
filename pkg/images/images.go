@@ -1,100 +1,123 @@
 package images
 
 import (
-	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"github.com/containers/buildah/define"
-	"github.com/containers/podman/v4/pkg/bindings"
-	"github.com/containers/podman/v4/pkg/bindings/containers"
-	"github.com/containers/podman/v4/pkg/bindings/images"
-	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/containers/podman/v4/pkg/specgen"
-	"io"
+	"github.com/alknopfler/seactl/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"log"
+	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
-const (
-	podmanArgsBase        = "--log-level=debug system service -t 0"
-	podmanExec            = "/usr/bin/podman"
-	podmanListenerLogFile = "podman-system-service.log"
-	podmanSocketPath      = "/run/podman/podman.sock"
-	podmanSocketURI       = "unix://%s"
-	dockerfile            = "Dockerfile"
-	podmanDirName         = "podman"
-	podmanBuildLogFile    = "podman-image-build.log"
-)
-
-type Podman struct {
-	context context.Context
-	out     string
+type Images struct {
+	Name     string
+	Version  string
+	Location string
+	Insecure bool
+	reg      *registry.Registry
+	ImageRef v1.Image
 }
 
-// New setups a podman listening service and returns a connected podman client.
-//
-// Parameters:
-//   - out - location for podman to output any logs created as a result of podman commands
-func New(out string) (*Podman, error) {
-	if err := setupAPIListener(out); err != nil {
-		return nil, fmt.Errorf("creating new podman instance: %w", err)
+func New(name, version, location string, reg *registry.Registry) *Images {
+	return &Images{
+		Name:     name,
+		Version:  version,
+		Location: location,
+		reg:      reg,
 	}
+}
 
-	conn, err := bindings.NewConnection(context.Background(), fmt.Sprintf(podmanSocketURI, podmanSocketPath))
+func (i *Images) Download() error {
+	im := i.Location + "/" + i.Name + ":" + i.Version
+	ref, err := name.ParseReference(im)
 	if err != nil {
-		return nil, fmt.Errorf("creating new podman connection: %w", err)
+		log.Printf("failed to parse image reference %q: %v", im, err)
+		return err
 	}
 
-	return &Podman{
-		context: conn,
-		out:     out,
-	}, nil
-}
+	fmt.Println(ref)
 
-// creates a listening service that answers API calls for Podman (https://docs.podman.io/en/v4.8.3/markdown/podman-system-service.1.html)
-// only way to start the service from within a container - https://github.com/containers/podman/tree/v4.8.3/pkg/bindings#starting-the-service-manually
-func setupAPIListener(out string) error {
-	log.Println("Setting up Podman API listener...")
-
-	logFile, err := os.Create(filepath.Join(out, podmanListenerLogFile))
+	img, err := remote.Image(ref)
 	if err != nil {
-		return fmt.Errorf("creating podman listener log file: %w", err)
+		log.Printf("pulling image %q: %v", img, err)
+		return err
 	}
 
-	defer logFile.Close()
+	i.ImageRef = img
+	log.Printf("successfully pulled image %q", img)
+	return nil
+}
 
-	cmd := preparePodmanCommand(logFile)
-	err = cmd.Start()
+func (i *Images) Verify() error {
+	// Verify the image
+	return nil
+}
+
+func (i *Images) Upload() error {
+
+	ref, err := name.ParseReference(i.reg.RegistryURL + "/" + i.Name + ":" + i.Version)
 	if err != nil {
-		return fmt.Errorf("error running podman system service: %w", err)
+		return fmt.Errorf("parsing reference %q: %v", i.reg.RegistryURL+"/"+i.Name+":"+i.Version, err)
 	}
 
-	return waitForPodmanSock()
+	opts, err := i.getRemoteOpts()
+	if err != nil {
+		return fmt.Errorf("getting remote options: %v", err)
+	}
+
+	err = remote.Write(ref, i.ImageRef, opts...)
+	if err != nil {
+		return fmt.Errorf("pushing image %q: %v", i.ImageRef, err)
+	}
+
+	log.Printf("successfully pushed image %q", i.ImageRef)
+	return nil
 }
 
-func preparePodmanCommand(out io.Writer) *exec.Cmd {
-	args := strings.Split(podmanArgsBase, " ")
-	cmd := exec.Command(podmanExec, args...)
-	cmd.Stdout = out
-	cmd.Stderr = out
+func (i *Images) getRemoteOpts() ([]remote.Option, error) {
+	// Create a custom HTTP transport
+	tlsConfig := &tls.Config{}
 
-	return cmd
-}
-
-func waitForPodmanSock() error {
-	const (
-		retries      = 5
-		sleepSeconds = 3
-	)
-
-	for i := 0; i < retries; i++ {
-		if _, err := os.Stat(podmanSocketPath); err == nil {
-			return nil
+	if i.Insecure {
+		tlsConfig.InsecureSkipVerify = true
+	} else if i.reg.RegistryCACert != "" {
+		// Load CA certificate
+		caCert, err := os.ReadFile(i.reg.RegistryCACert)
+		if err != nil {
+			return nil, fmt.Errorf("reading CA certificate: %v", err)
 		}
-		time.Sleep(sleepSeconds * time.Second)
+
+		// Create a CA certificate pool
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig.RootCAs = caCertPool
 	}
-	return fmt.Errorf("'%s' file was not created in the expected time", podmanSocketPath)
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	authFile, err := i.reg.GetUserFromAuthFile()
+	if err != nil {
+		return nil, fmt.Errorf("reading auth file: %v", err)
+	}
+
+	// Create a registry authenticator
+	auth := &authn.Basic{
+		Username: authFile[0],
+		Password: authFile[1],
+	}
+
+	remoteOpts := []remote.Option{
+		remote.WithTransport(transport),
+		remote.WithAuth(auth),
+	}
+
+	// Remote options with custom HTTP client and authenticator
+	return remoteOpts, nil
 }
