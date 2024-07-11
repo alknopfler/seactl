@@ -67,6 +67,6 @@ func (h *Helm) Upload() error {
 		log.Printf("failed to push to the registry: %s", err)
 		return err
 	}
-	defer os.Remove(tempDir)
+	defer os.RemoveAll(tempDir)
 	return nil
 }
