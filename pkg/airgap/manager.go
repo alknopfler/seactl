@@ -127,7 +127,7 @@ func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registr
 			return err
 		}
 
-		log.Println("Helm chart %s prepared and uploaded successfully!", value)
+		log.Printf("Helm chart %s prepared and uploaded successfully!\n", value)
 
 	}
 	log.Println(color.InGreen("Helm Chart artifacts pre-loaded in registry successfully!"))
@@ -165,7 +165,7 @@ func generateImagesArtifacts(releaseManifest *config.ReleaseManifest, reg *regis
 			return err
 		}
 
-		log.Println("Images %s prepared and uploaded successfully!", value)
+		log.Printf("Images %s prepared and uploaded successfully!\n", value)
 
 	}
 	log.Println(color.InGreen("Images artifacts pre-loaded in registry successfully!"))
