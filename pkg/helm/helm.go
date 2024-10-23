@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	tempDir = ".temporal"
+	tempDir = "./"
 )
 
 type Helm struct {
@@ -33,14 +33,13 @@ func New(name, version, url string, reg *registry.Registry) *Helm {
 
 func (h *Helm) Download() error {
 	var args []string
-	os.Mkdir(tempDir, os.FileMode(os.ModeDir))
 
 	args = append(args, "pull", h.URL+h.Name, "--version", h.Version, "-d", tempDir)
 	cmd := exec.Command("helm", args...)
 	err := cmd.Run()
 
 	if err != nil {
-		log.Printf("failed to login to the registry: %s", err)
+		log.Printf("failed to Download from the registry: %s", err)
 		return err
 	}
 	return nil
@@ -60,13 +59,16 @@ func (h *Helm) Upload() error {
 
 	if h.Insecure {
 		args = append(args, "--insecure-skip-tls-verify")
+	} else if h.reg.RegistryCACert != "" {
+		args = append(args, "--ca-file", h.reg.RegistryCACert)
 	}
+
 	cmd := exec.Command("helm", args...)
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("failed to push to the registry: %s", err)
 		return err
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.Remove(filepath.Join(tempDir, h.Name+"-"+h.Version+".tgz"))
 	return nil
 }

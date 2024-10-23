@@ -30,6 +30,12 @@ make compile
 <username_bas64encoded>:<password_base64encoded>
 ```
 
+for example you can generate both using
+```
+echo -n "myuser" | base64
+echo -n "mypassword" | base64
+```
+
 2. If your private registry is using a self-signed certificate, create a CA certificate file and provide the path to the tool.
 
 The following command can be used to generate the airgap artifacts

@@ -48,9 +48,9 @@ func validateReleaseManifest(manifest *ReleaseManifest) error {
 		log.Printf("releaseVersion is missing")
 		return errors.New("releaseVersion is missing")
 	}
-	if len(manifest.SuportedUpgrades) == 0 {
-		log.Printf("suportedUpgrades is missing or empty")
-		return errors.New("suportedUpgrades is missing or empty")
+	if len(manifest.SupportedUpgrades) == 0 {
+		log.Printf("supportedUpgrades is missing or empty")
+		return errors.New("supportedUpgrades is missing or empty")
 	}
 	if manifest.Components.OperatingSystem.Upgrade.Version == "" {
 		log.Printf("operatingSystem upgrade version is missing")
