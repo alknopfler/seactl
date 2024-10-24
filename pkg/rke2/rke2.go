@@ -52,7 +52,6 @@ func (r *RKE2) Download() error {
 		log.Printf("failed to download the install.sh script: %v", err)
 		return err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("failed to download the install.sh script: HTTP status %s", resp.Status)
@@ -66,6 +65,14 @@ func (r *RKE2) Download() error {
 		log.Printf("failed to create file: %v", err)
 		return err
 	}
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		log.Printf("failed to save file: %v", err)
+		return err
+	}
+	log.Printf("install.sh script downloaded successfully to %s", filepath.Join(ensureTrailingSlash(r.OutputDirTarball), "install.sh"))
+
+	defer resp.Body.Close()
 	defer out.Close()
 
 	// Download the tarball files for the current release
