@@ -46,68 +46,17 @@ func (r *RKE2) Download() error {
 		log.Printf("failed to create destination directory: %v", err)
 		return err
 	}
-	// Download the install.sh script from https://get.rke2.io
-	resp, err := http.Get("https://get.rke2.io")
-	if err != nil {
-		log.Printf("failed to download the install.sh script: %v", err)
-		return err
-	}
 
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("failed to download the install.sh script: HTTP status %s", resp.Status)
-		return fmt.Errorf("failed to download the install.sh script: HTTP status %s", resp.Status)
+	// Download the install.sh script
+	if getFileFromURL("https://get.rke2.io", "install.sh", ensureTrailingSlash(r.OutputDirTarball)) != nil {
+		return fmt.Errorf("failed to download the install.sh script")
 	}
-
-	// Create the file
-	out, err := os.Create(filepath.Join(ensureTrailingSlash(r.OutputDirTarball), "install.sh"))
-
-	if err != nil {
-		log.Printf("failed to create file: %v", err)
-		return err
-	}
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		log.Printf("failed to save file: %v", err)
-		return err
-	}
-	log.Printf("install.sh script downloaded successfully to %s", filepath.Join(ensureTrailingSlash(r.OutputDirTarball), "install.sh"))
-
-	defer resp.Body.Close()
-	defer out.Close()
 
 	// Download the tarball files for the current release
 	for _, image := range listRKE2Images {
-
-		// Construct the file path
-		filePath := filepath.Join(ensureTrailingSlash(r.OutputDirTarball), image)
-
-		// Download the file
-		resp, err := http.Get(RKE2ReleaseURL + replaceVersionLink(r.Version) + "/" + image)
-		if err != nil {
-			log.Printf("failed to download the images: %v", err)
-			return err
+		if getFileFromURL(RKE2ReleaseURL+replaceVersionLink(r.Version)+"/"+image, image, ensureTrailingSlash(r.OutputDirTarball)) != nil {
+			return fmt.Errorf("failed to download the file: %s", image)
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("failed to download the images: HTTP status %s", resp.Status)
-			return fmt.Errorf("failed to download the images: HTTP status %s", resp.Status)
-		}
-
-		// Create the file
-		out, err := os.Create(filePath)
-		if err != nil {
-			log.Printf("failed to create file: %v", err)
-			return err
-		}
-		defer out.Close()
-
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			log.Printf("failed to save file: %v", err)
-			return err
-		}
-		log.Printf("Image downloaded successfully to %s", filePath)
 	}
 	return nil
 }
@@ -140,4 +89,35 @@ func ensureTrailingSlash(dir string) string {
 		dir += "/"
 	}
 	return dir
+}
+
+func getFileFromURL(url, filename, filePath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Printf("failed to download the file %s, %v", filename, err)
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("failed to download the file %s from %s: HTTP status %s", filename, url, resp.Status)
+		return fmt.Errorf("failed to download the file %s from %s: HTTP status %s", filename, url, resp.Status)
+	}
+
+	// Create the file
+	out, err := os.Create(filePath + filename)
+
+	if err != nil {
+		log.Printf("failed to create file: %v", err)
+		return err
+	}
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		log.Printf("failed to save file: %v", err)
+		return err
+	}
+	log.Printf("File %s downloaded successfully to %s", filename, filePath)
+
+	defer resp.Body.Close()
+	defer out.Close()
+	return nil
 }
