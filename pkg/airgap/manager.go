@@ -1,6 +1,7 @@
 package airgap
 
 import (
+	"errors"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/pkg/config"
 	"github.com/alknopfler/seactl/pkg/helm"
@@ -8,6 +9,7 @@ import (
 	"github.com/alknopfler/seactl/pkg/registry"
 	"github.com/alknopfler/seactl/pkg/rke2"
 	"log"
+	"os/exec"
 	"sync"
 )
 
@@ -171,4 +173,11 @@ func generateImagesArtifacts(releaseManifest *config.ReleaseManifest, reg *regis
 	log.Println(color.InGreen("Images artifacts pre-loaded in registry successfully!"))
 	return nil
 
+}
+
+func CheckHelmCommand() error {
+	if _, err := exec.LookPath("helm"); err != nil {
+		return errors.New("Helm command not found in the system. You need to install it to continue")
+	}
+	return nil
 }

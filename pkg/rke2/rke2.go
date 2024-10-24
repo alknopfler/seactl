@@ -46,7 +46,29 @@ func (r *RKE2) Download() error {
 		log.Printf("failed to create destination directory: %v", err)
 		return err
 	}
+	// Download the install.sh script from https://get.rke2.io
+	resp, err := http.Get("https://get.rke2.io")
+	if err != nil {
+		log.Printf("failed to download the install.sh script: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("failed to download the install.sh script: HTTP status %s", resp.Status)
+		return fmt.Errorf("failed to download the install.sh script: HTTP status %s", resp.Status)
+	}
+
+	// Create the file
+	out, err := os.Create(filepath.Join(ensureTrailingSlash(r.OutputDirTarball), "install.sh"))
+
+	if err != nil {
+		log.Printf("failed to create file: %v", err)
+		return err
+	}
+	defer out.Close()
+
+	// Download the tarball files for the current release
 	for _, image := range listRKE2Images {
 
 		// Construct the file path

@@ -21,7 +21,7 @@ func main() {
 
 func newCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "suse-edge-airgap",
+		Use:   "seactl",
 		Short: "SUSE Edge Air-gap tool enables to create an air-gap scenario using the suse-edge release manifest",
 		Long: "SUSE Edge Air-gap tool enables to create an air-gap scenario using the suse-edge release manifest. The output could be a tarball, but also you could upload to a private registry.\n" +
 			"Features: \n" +
