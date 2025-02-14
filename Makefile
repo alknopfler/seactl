@@ -8,8 +8,8 @@ run:
 
 compile:
 	echo "Compiling for every OS and Platform"
-	GOOS=linux GOARCH=amd64 go build -o ${BINARY_NAME} .
-	#GOOS=linux GOARCH=arm64 go build -o ${BINARY_NAME} .
+	GOOS=linux GOARCH=amd64 go build -o ${BINARY_NAME}-x86 .
+	GOOS=linux GOARCH=arm64 go build -o ${BINARY_NAME}-aarch64 .
 	#GOOS=freebsd GOARCH=386 go build -o ${BINARY_NAME} .
 
 all: build compile run
