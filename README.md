@@ -1,9 +1,9 @@
-# seactl
-SUSE Edge Airgap Tool created to make the airgap process easier for SUSE Edge deployments.
+# seactl (SUSE Edge Airgap Command Line Interface)
+SUSE Edge Airgap Tool created to make the airgap process easier for SUSE Edge for telco deployments.
 
 ## Features
 
-- Read the info from the release manifest file.
+- Read the info from the airgap manifest file.
 - Create a tarball for rke2 release tarball files (required to be used in capi airgap scenarios).
 - Upload the helm-charts oci images defined in the release manifest to the private registry .
 - Upload the containers images defined in the release manifest to the private registry.
@@ -54,12 +54,31 @@ Flags:
 -r, --registry-url string        Registry URL
 ```
 
-## Example
+## Example of airgap manifest file
+
+```yaml
+apiVersion: 1.0
+components:
+  kubernetes:
+    rke2:
+      version: v1.28.9+rke2r1
+  helm:
+    - name: sriov-crd-chart
+      version: 1.2.2
+      location: oci://registry.suse.com/edge/
+      namespace: sriov-network-operator
+  images:
+    - name: hardened-sriov-network-operator
+      version: v1.2.0-build20240327
+      location: docker.io/rancher
+```
+
+## Example of usage
 
 ```bash
-seactl generate -i release-manifest.yaml -o /tmp/airgap -a registry-auth.txt -c /opt/certs/ca.crt -r myregistry:5000
+seactl generate -i airgap-manifest.yaml -o /tmp/airgap -a registry-auth.txt -c /opt/certs/ca.crt -r myregistry:5000
 ```
 
 ```bash
-seactl generate -i release-manifest.yaml -o /tmp/airgap -a registry-auth.txt -r myregistry:5000 --insecure
+seactl generate -i airgap-manifest.yaml -o /tmp/airgap -a registry-auth.txt -r myregistry:5000 --insecure
 ```
