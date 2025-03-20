@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-// Func ReadReleaseManifest from a input file, and return a ReleaseManifest struct or an error if something goes wrong
-func ReadReleaseManifest(input string) (*ReleaseManifest, error) {
+// Func ReadAirgapManifest from a input file, and return a AirgapManifest struct or an error if something goes wrong
+func ReadAirgapManifest(input string) (*AirgapManifest, error) {
 
 	if _, err := os.Stat(input); os.IsNotExist(err) {
 		log.Printf("file does not exist: %s", input)
@@ -23,14 +23,14 @@ func ReadReleaseManifest(input string) (*ReleaseManifest, error) {
 	}
 
 	// Unmarshal YAML into struct
-	var manifest ReleaseManifest
+	var manifest AirgapManifest
 	if err := yaml.Unmarshal(data, &manifest); err != nil {
 		log.Printf("failed to unmarshal YAML: %v", err)
 		return nil, err
 	}
 
 	// Validate the manifest
-	if err := validateReleaseManifest(&manifest); err != nil {
+	if err := validateAirgapManifest(&manifest); err != nil {
 		return nil, err
 	}
 
@@ -38,23 +38,11 @@ func ReadReleaseManifest(input string) (*ReleaseManifest, error) {
 
 }
 
-func validateReleaseManifest(manifest *ReleaseManifest) error {
+func validateAirgapManifest(manifest *AirgapManifest) error {
 	// Validate the manifest
 	if manifest.APIVersion == 0 {
 		log.Printf("apiVersion is missing or invalid")
 		return errors.New("apiVersion is missing or invalid")
-	}
-	if manifest.ReleaseVersion == "" {
-		log.Printf("releaseVersion is missing")
-		return errors.New("releaseVersion is missing")
-	}
-	if len(manifest.SupportedUpgrades) == 0 {
-		log.Printf("supportedUpgrades is missing or empty")
-		return errors.New("supportedUpgrades is missing or empty")
-	}
-	if manifest.Components.OperatingSystem.Upgrade.Version == "" {
-		log.Printf("operatingSystem upgrade version is missing")
-		return errors.New("operatingSystem upgrade version is missing")
 	}
 	if manifest.Components.Kubernetes.Rke2.Version == "" {
 		log.Printf("kubernetes rke2 version is missing")

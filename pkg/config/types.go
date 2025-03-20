@@ -1,23 +1,13 @@
 package config
 
-// ReleaseManifest is the struct that represents the release manifest
-type ReleaseManifest struct {
-	APIVersion        float64  `yaml:"apiVersion"`
-	ReleaseVersion    string   `yaml:"releaseVersion"`
-	SupportedUpgrades []string `yaml:"supportedUpgrades"`
-	Components        struct {
-		OperatingSystem struct {
-			Upgrade struct {
-				Version string `yaml:"version"`
-			} `yaml:"upgrade"`
-		} `yaml:"operatingSystem"`
+// AirgapManifest is the struct that represents the airgap manifest
+type AirgapManifest struct {
+	APIVersion float64 `yaml:"apiVersion"`
+	Components struct {
 		Kubernetes struct {
 			Rke2 struct {
 				Version string `yaml:"version"`
 			} `yaml:"rke2"`
-			K3S struct {
-				Version string `yaml:"version"`
-			} `yaml:"k3s"`
 		} `yaml:"kubernetes"`
 		Helm []struct {
 			Name      string `yaml:"name"`

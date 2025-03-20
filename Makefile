@@ -1,6 +1,6 @@
 BINARY_NAME=seactl
 build:
-	go build -o seactlmain .
+	go build -o seactl .
 
 run:
 	go run main.go

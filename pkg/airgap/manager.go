@@ -25,7 +25,7 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	releaseManifest, err := config.ReadReleaseManifest(releaseManifestFile)
+	releaseManifest, err := config.ReadAirgapManifest(releaseManifestFile)
 	if err != nil {
 		return err
 	}
@@ -78,9 +78,9 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	return nil
 }
 
-func generateRKE2Artifacts(releaseManifest *config.ReleaseManifest, outputDirTarball string) error {
+func generateRKE2Artifacts(airgapManifest *config.AirgapManifest, outputDirTarball string) error {
 
-	r := rke2.New(releaseManifest.Components.Kubernetes.Rke2.Version, outputDirTarball)
+	r := rke2.New(airgapManifest.Components.Kubernetes.Rke2.Version, outputDirTarball)
 
 	log.Printf("Starting to download RKE2 images to %s. This may take a while...", outputDirTarball)
 
@@ -98,9 +98,9 @@ func generateRKE2Artifacts(releaseManifest *config.ReleaseManifest, outputDirTar
 	return nil
 }
 
-func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
+func generateHelmArtifacts(airgapManifest *config.AirgapManifest, reg *registry.Registry) error {
 	// Helm Charts Artifacts to be uploaded to registr
-	for _, value := range releaseManifest.Components.Helm {
+	for _, value := range airgapManifest.Components.Helm {
 
 		h := helm.New(value.Name, value.Version, value.Location, reg)
 		err := reg.RegistryHelmLogin()
@@ -136,9 +136,9 @@ func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registr
 	return nil
 }
 
-func generateImagesArtifacts(releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
+func generateImagesArtifacts(airgapManifest *config.AirgapManifest, reg *registry.Registry) error {
 	// Images Artifacts to be uploaded to registry
-	for _, value := range releaseManifest.Components.Images {
+	for _, value := range airgapManifest.Components.Images {
 
 		image := images.New(value.Name, value.Version, value.Location, reg)
 		err := reg.RegistryLogin()

@@ -6,30 +6,30 @@ import (
 )
 
 var (
-	releaseManifestFile string
-	registryAuthFile    string
-	registryURL         string
-	registryCACert      string
-	registryInsecure    bool
-	outputDirTarball    string
+	airgapManifestFile string
+	registryAuthFile   string
+	registryURL        string
+	registryCACert     string
+	registryInsecure   bool
+	outputDirTarball   string
 )
 
 func NewAirGapCommand() *cobra.Command {
 
 	c := &cobra.Command{
 		Use:   "generate",
-		Short: "Command to generate the air-gap artifacts from the release manifest",
+		Short: "Command to generate the air-gap artifacts from the airgap manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if helm command is available
 			if err := airgap.CheckHelmCommand(); err != nil {
 				return err
 			}
-			return airgap.GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
+			return airgap.GenerateAirGapEnvironment(airgapManifestFile, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
 		},
 	}
 	// Add flags
 	flags := c.Flags()
-	flags.StringVarP(&releaseManifestFile, "input", "i", "", "Release manifest file")
+	flags.StringVarP(&airgapManifestFile, "input", "i", "", "Airgap manifest file")
 	flags.StringVarP(&registryURL, "registry-url", "r", "", "Registry URL")
 	flags.StringVarP(&registryCACert, "registry-cacert", "c", "", "Registry CA Certificate file")
 	flags.StringVarP(&registryAuthFile, "registry-authfile", "a", "", "Registry Auth file with username:password base64 encoded")
