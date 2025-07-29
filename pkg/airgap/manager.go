@@ -2,6 +2,7 @@ package airgap
 
 import (
 	"errors"
+	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/pkg/config"
 	"github.com/alknopfler/seactl/pkg/helm"
@@ -19,7 +20,7 @@ type Manager interface {
 	Upload() error
 }
 
-func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball string, insecure bool) error {
+func GenerateAirGapEnvironment(dryrun bool, releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball string, insecure bool) error {
 	fatalErrors := make(chan error)
 	wgDone := make(chan bool)
 	var wg sync.WaitGroup
@@ -34,7 +35,7 @@ func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registr
 
 	// RKE2 Artifacts
 	go func() {
-		err = generateRKE2Artifacts(releaseManifest, outputDirTarball)
+		err := generateRKE2Artifacts(dryrun, releaseManifest, outputDirTarball)
 		if err != nil {
 			fatalErrors <- err
 		}
@@ -43,7 +44,7 @@ func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registr
 
 	// Helm Charts Artifacts to be uploaded to registry
 	go func() {
-		err = generateHelmArtifacts(releaseManifest, reg)
+		err = generateHelmArtifacts(dryrun, releaseManifest, reg)
 		if err != nil {
 			fatalErrors <- err
 		}
@@ -52,7 +53,7 @@ func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registr
 
 	// Images Artifacts to be uploaded to registry
 	go func() {
-		err = generateImagesArtifacts(imagesManifest, reg)
+		err = generateImagesArtifacts(dryrun, imagesManifest, reg)
 		if err != nil {
 			fatalErrors <- err
 		}
@@ -78,97 +79,106 @@ func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registr
 	return nil
 }
 
-func generateRKE2Artifacts(airgapManifest *config.ReleaseManifest, outputDirTarball string) error {
+func generateRKE2Artifacts(dryrun bool, airgapManifest *config.ReleaseManifest, outputDirTarball string) error {
 
 	r := rke2.New(airgapManifest.Spec.Components.Kubernetes.Rke2.Version, outputDirTarball)
 
-	log.Printf("Starting to download RKE2 images to %s. This may take a while...", outputDirTarball)
+	if !dryrun {
+		err := r.Download()
+		if err != nil {
+			return err
+		}
 
-	err := r.Download()
-	if err != nil {
-		return err
+		err = r.Verify()
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Println("Dry run mode enabled, skipping download and verification of RKE2 images.")
 	}
-
-	err = r.Verify()
-	if err != nil {
-		return err
-	}
-
 	log.Println(color.InGreen("RKE2 Images downloaded and verified successfully! you can find them in: " + outputDirTarball))
 	return nil
 }
 
-func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
+func generateHelmArtifacts(dryrun bool, releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
 	// Helm Charts Artifacts to be uploaded to registr
 	for _, value := range releaseManifest.Spec.Components.Workloads.Helm {
 
-		h := helm.New(value.ReleaseName, value.Version, value.Chart, reg)
-		err := reg.RegistryHelmLogin()
-		if err != nil {
-			return err
-		}
+		h := helm.New(value.ReleaseName, value.Version, value.Chart, value.Repository, reg)
+		if !dryrun {
+			err := reg.RegistryHelmLogin()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to download helm-chart %s. This may take a while...", value)
-		err = h.Download()
-		if err != nil {
-			return err
-		}
+			err = h.Download()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to verify helm-chart %s. This may take a while...", value)
-		err = h.Verify()
-		if err != nil {
-			return err
-		}
+			err = h.Verify()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to upload helm-chart %s to the registry %s This may take a while...", value, reg.RegistryURL)
-		if reg.RegistryInsecure {
-			h.Insecure = true
-		}
-		err = h.Upload()
-		if err != nil {
-			return err
-		}
+			if reg.RegistryInsecure {
+				h.Insecure = true
+			}
 
-		log.Printf("Helm chart %s prepared and uploaded successfully!\n", value)
+			err = h.Upload()
+			if err != nil {
+				return err
+			}
 
+			log.Printf(color.InGreen("Helm chart %s prepared and uploaded successfully!\n"), value)
+		} else {
+			// list all info about the helm chart instead of uploading it
+			log.Println("DryRun mode - Helm Chart Info:")
+			log.Printf("\nName: %s\nVersion: %s\nURL: %s\nChart: %s\n", h.Name, h.Version, h.URL, h.Chart)
+		}
 	}
 	log.Println(color.InGreen("Helm Chart artifacts pre-loaded in registry successfully!"))
 	return nil
 }
 
-func generateImagesArtifacts(imagesManifest *config.ImagesManifest, reg *registry.Registry) error {
+func generateImagesArtifacts(dryrun bool, imagesManifest *config.ImagesManifest, reg *registry.Registry) error {
 	// Images Artifacts to be uploaded to registry
 	for _, value := range imagesManifest.Images {
 
 		image := images.New(value.Name, reg)
-		err := reg.RegistryLogin()
-		if err != nil {
-			return err
-		}
+		if !dryrun {
+			err := reg.RegistryLogin()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to download images %s. This may take a while...", value)
-		err = image.Download()
-		if err != nil {
-			return err
-		}
+			err = image.Download()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to verify images %s. This may take a while...", value)
-		err = image.Verify()
-		if err != nil {
-			return err
-		}
+			err = image.Verify()
+			if err != nil {
+				return err
+			}
 
-		log.Printf("Starting to upload images %s to the registry %s This may take a while...", value, reg.RegistryURL)
-		if reg.RegistryInsecure {
-			image.Insecure = true
-		}
-		err = image.Upload()
-		if err != nil {
-			return err
-		}
+			if reg.RegistryInsecure {
+				image.Insecure = true
+			}
 
-		log.Printf("Images %s prepared and uploaded successfully!\n", value)
+			// list all info about the image instead of uploading it
+			fmt.Println("Image Info:")
+			fmt.Printf("Name: %s\n", image.Name)
 
+			err = image.Upload()
+			if err != nil {
+				return err
+			}
+		} else {
+			// list all info about the image instead of uploading it
+			log.Println("DryRun mode - Image Info:")
+			log.Printf("\nName: %s\n", image.Name)
+		}
 	}
 	log.Println(color.InGreen("Images artifacts pre-loaded in registry successfully!"))
 	return nil

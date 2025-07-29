@@ -15,6 +15,7 @@ var (
 	registryCACert   string
 	registryInsecure bool
 	outputDirTarball string
+	dryRun           bool // If true, do not perform any actions like upload files to registry or download nothing, just print what would be done
 )
 
 func NewAirGapCommand() *cobra.Command {
@@ -36,7 +37,7 @@ func NewAirGapCommand() *cobra.Command {
 				fmt.Printf("invalid release version format: %s, expected format is X.Y.Z", releaseVersion)
 				os.Exit(1)
 			}
-			return airgap.GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
+			return airgap.GenerateAirGapEnvironment(dryRun, releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
 		},
 	}
 	// Add flags
@@ -48,6 +49,7 @@ func NewAirGapCommand() *cobra.Command {
 	flags.StringVarP(&registryAuthFile, "registry-authfile", "a", "", "Registry Auth file with username:password base64 encoded")
 	flags.BoolVarP(&registryInsecure, "insecure", "k", false, "Skip TLS verification in registry")
 	flags.StringVarP(&outputDirTarball, "output", "o", "", "Output directory to store the tarball files")
+	flags.BoolVarP(&dryRun, "dry-run", "d", false, "Dry run mode, do not perform any actions, just print what would be done")
 	// add options and required flags
 	c.MarkFlagRequired("release-version")
 	c.MarkFlagRequired("output")

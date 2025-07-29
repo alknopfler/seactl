@@ -1,6 +1,7 @@
 package config
 
 import (
+	"archive/tar"
 	"bytes"
 	"errors"
 	"fmt"
@@ -64,7 +65,7 @@ func ReadAirgapManifest(version, mode string) (*ReleaseManifest, *ImagesManifest
 func extractFileFromContainer(imageURL, filePath string) ([]byte, error) {
 	// Pull image
 	if err := exec.Command("podman", "pull", imageURL).Run(); err != nil {
-		return nil, fmt.Errorf("failed to pull image: %w", err)
+		return nil, fmt.Errorf("failed to pull image: %s %w", imageURL, err)
 	}
 
 	// Create container
@@ -74,19 +75,31 @@ func extractFileFromContainer(imageURL, filePath string) ([]byte, error) {
 	}
 	containerID := strings.TrimSpace(string(containerIDRaw))
 
-	// Extract file using podman cp
+	// Extract file using podman cp (into tar stream)
 	var buf bytes.Buffer
 	cmd := exec.Command("podman", "cp", fmt.Sprintf("%s:%s", containerID, filePath), "-")
 	cmd.Stdout = &buf
-	cmd.Stderr = &buf
 	if err := cmd.Run(); err != nil {
-		// Clean up before returning
 		exec.Command("podman", "rm", containerID).Run()
-		return nil, fmt.Errorf("failed to extract file: %v\n%s", err, buf.String())
+		return nil, fmt.Errorf("failed to extract file: %s %w", filePath, err)
 	}
 
-	// Cleanup
+	// Cleanup container
 	_ = exec.Command("podman", "rm", containerID).Run()
 
-	return buf.Bytes(), nil
+	// Read TAR stream and extract file content
+	tarReader := tar.NewReader(&buf)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read tar header: %w", err)
+		}
+		if header.Typeflag == tar.TypeReg {
+			var fileContent bytes.Buffer
+			if _, err := fileContent.ReadFrom(tarReader); err != nil {
+				return nil, fmt.Errorf("failed to read file from tar: %w", err)
+			}
+			return fileContent.Bytes(), nil
+		}
+	}
 }
