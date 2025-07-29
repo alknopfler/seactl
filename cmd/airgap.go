@@ -1,17 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/alknopfler/seactl/pkg/airgap"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var (
-	airgapManifestFile string
-	registryAuthFile   string
-	registryURL        string
-	registryCACert     string
-	registryInsecure   bool
-	outputDirTarball   string
+	releaseVersion   string
+	releaseMode      string // This variable is provided to use `factory` or `production` mode
+	registryAuthFile string
+	registryURL      string
+	registryCACert   string
+	registryInsecure bool
+	outputDirTarball string
 )
 
 func NewAirGapCommand() *cobra.Command {
@@ -24,19 +27,29 @@ func NewAirGapCommand() *cobra.Command {
 			if err := airgap.CheckHelmCommand(); err != nil {
 				return err
 			}
-			return airgap.GenerateAirGapEnvironment(airgapManifestFile, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
+			if releaseMode != "factory" && releaseMode != "production" {
+				fmt.Fprintf(os.Stderr, "Invalid value for --release-mode: %s\n", releaseMode)
+				fmt.Fprintf(os.Stderr, "Allowed values are 'factory' or 'production'\n")
+				os.Exit(1)
+			}
+			if releaseVersion == "" || len(releaseVersion) < 5 || releaseVersion[1] != '.' || releaseVersion[3] != '.' {
+				fmt.Printf("invalid release version format: %s, expected format is X.Y.Z", releaseVersion)
+				os.Exit(1)
+			}
+			return airgap.GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball, registryInsecure)
 		},
 	}
 	// Add flags
 	flags := c.Flags()
-	flags.StringVarP(&airgapManifestFile, "input", "i", "", "Airgap manifest file")
+	flags.StringVarP(&releaseVersion, "release-version", "v", "", "SUSE Edge release version (e.g. 3.4.0 with X.Y.Z format)")
+	flags.StringVarP(&releaseMode, "release-mode", "m", "factory", "Release mode, either 'factory' or 'production'")
 	flags.StringVarP(&registryURL, "registry-url", "r", "", "Registry URL")
 	flags.StringVarP(&registryCACert, "registry-cacert", "c", "", "Registry CA Certificate file")
 	flags.StringVarP(&registryAuthFile, "registry-authfile", "a", "", "Registry Auth file with username:password base64 encoded")
 	flags.BoolVarP(&registryInsecure, "insecure", "k", false, "Skip TLS verification in registry")
 	flags.StringVarP(&outputDirTarball, "output", "o", "", "Output directory to store the tarball files")
 	// add options and required flags
-	c.MarkFlagRequired("input")
+	c.MarkFlagRequired("release-version")
 	c.MarkFlagRequired("output")
 	c.MarkFlagRequired("registry-url")
 

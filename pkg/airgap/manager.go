@@ -19,13 +19,13 @@ type Manager interface {
 	Upload() error
 }
 
-func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFile, registryCACert, outputDirTarball string, insecure bool) error {
+func GenerateAirGapEnvironment(releaseVersion, releaseMode, registryURL, registryAuthFile, registryCACert, outputDirTarball string, insecure bool) error {
 	fatalErrors := make(chan error)
 	wgDone := make(chan bool)
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	releaseManifest, err := config.ReadAirgapManifest(releaseManifestFile)
+	releaseManifest, imagesManifest, err := config.ReadAirgapManifest(releaseVersion, releaseMode)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 
 	// Images Artifacts to be uploaded to registry
 	go func() {
-		err = generateImagesArtifacts(releaseManifest, reg)
+		err = generateImagesArtifacts(imagesManifest, reg)
 		if err != nil {
 			fatalErrors <- err
 		}
@@ -78,9 +78,9 @@ func GenerateAirGapEnvironment(releaseManifestFile, registryURL, registryAuthFil
 	return nil
 }
 
-func generateRKE2Artifacts(airgapManifest *config.AirgapManifest, outputDirTarball string) error {
+func generateRKE2Artifacts(airgapManifest *config.ReleaseManifest, outputDirTarball string) error {
 
-	r := rke2.New(airgapManifest.Components.Kubernetes.Rke2.Version, outputDirTarball)
+	r := rke2.New(airgapManifest.Spec.Components.Kubernetes.Rke2.Version, outputDirTarball)
 
 	log.Printf("Starting to download RKE2 images to %s. This may take a while...", outputDirTarball)
 
@@ -98,11 +98,11 @@ func generateRKE2Artifacts(airgapManifest *config.AirgapManifest, outputDirTarba
 	return nil
 }
 
-func generateHelmArtifacts(airgapManifest *config.AirgapManifest, reg *registry.Registry) error {
+func generateHelmArtifacts(releaseManifest *config.ReleaseManifest, reg *registry.Registry) error {
 	// Helm Charts Artifacts to be uploaded to registr
-	for _, value := range airgapManifest.Components.Helm {
+	for _, value := range releaseManifest.Spec.Components.Workloads.Helm {
 
-		h := helm.New(value.Name, value.Version, value.Location, reg)
+		h := helm.New(value.ReleaseName, value.Version, value.Chart, reg)
 		err := reg.RegistryHelmLogin()
 		if err != nil {
 			return err
@@ -136,11 +136,11 @@ func generateHelmArtifacts(airgapManifest *config.AirgapManifest, reg *registry.
 	return nil
 }
 
-func generateImagesArtifacts(airgapManifest *config.AirgapManifest, reg *registry.Registry) error {
+func generateImagesArtifacts(imagesManifest *config.ImagesManifest, reg *registry.Registry) error {
 	// Images Artifacts to be uploaded to registry
-	for _, value := range airgapManifest.Components.Images {
+	for _, value := range imagesManifest.Images {
 
-		image := images.New(value.Name, value.Version, value.Location, reg)
+		image := images.New(value.Name, reg)
 		err := reg.RegistryLogin()
 		if err != nil {
 			return err

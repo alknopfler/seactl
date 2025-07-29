@@ -16,27 +16,23 @@ import (
 
 type Images struct {
 	Name     string
-	Version  string
-	Location string
-	Insecure bool
+	Insecure bool // If true, skip TLS verification
 	reg      *registry.Registry
 	ImageRef v1.Image
 }
 
-func New(name, version, location string, reg *registry.Registry) *Images {
+func New(name string, reg *registry.Registry) *Images {
 	return &Images{
-		Name:     name,
-		Version:  version,
-		Location: location,
-		reg:      reg,
+		Name: name,
+
+		reg: reg,
 	}
 }
 
 func (i *Images) Download() error {
-	im := i.Location + "/" + i.Name + ":" + i.Version
-	ref, err := name.ParseReference(im)
+	ref, err := name.ParseReference(i.Name)
 	if err != nil {
-		log.Printf("failed to parse image reference %q: %v", im, err)
+		log.Printf("failed to parse image reference %v", err)
 		return err
 	}
 
@@ -60,9 +56,9 @@ func (i *Images) Verify() error {
 
 func (i *Images) Upload() error {
 
-	ref, err := name.ParseReference(i.reg.RegistryURL + "/" + i.Name + ":" + i.Version)
+	ref, err := name.ParseReference(i.Name)
 	if err != nil {
-		return fmt.Errorf("parsing reference %q: %v", i.reg.RegistryURL+"/"+i.Name+":"+i.Version, err)
+		return fmt.Errorf("parsing reference %q: %v", i.Name, err)
 	}
 
 	opts, err := i.getRemoteOpts()
