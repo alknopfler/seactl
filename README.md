@@ -52,33 +52,21 @@ Flags:
 -a, --registry-authfile string   Registry Auth file with username:password base64 encoded
 -c, --registry-cacert string     Registry CA Certificate file
 -r, --registry-url string        Registry URL
-```
-
-## Example of airgap manifest file
-
-```yaml
-apiVersion: 1.0
-components:
-  kubernetes:
-    rke2:
-      version: v1.28.9+rke2r1
-  helm:
-    - name: sriov-crd-chart
-      version: 1.2.2
-      location: oci://registry.suse.com/edge/
-      namespace: sriov-network-operator
-  images:
-    - name: hardened-sriov-network-operator
-      version: v1.2.0-build20240327
-      location: docker.io/rancher
+-d, --dryrun                     Dry run mode, only print the actions without executing them
+-m, --release-mode string        Release mode, can be 'factory' or 'production' (default "factory")
+-v, --release-version string     Release version, e.g. 3.4.0 (X.Y.Z)
 ```
 
 ## Example of usage
 
 ```bash
-seactl generate -i airgap-manifest.yaml -o /tmp/airgap -a registry-auth.txt -c /opt/certs/ca.crt -r myregistry:5000
+seactl generate -v 3.4.0 -m factory -o /tmp/airgap -a registry-auth.txt -c /opt/certs/ca.crt -r myregistry:5000
 ```
 
 ```bash
-seactl generate -i airgap-manifest.yaml -o /tmp/airgap -a registry-auth.txt -r myregistry:5000 --insecure
+seactl generate -v 3.4.0 -m production -o /tmp/airgap -a registry-auth.txt -r myregistry:5000 --insecure
+```
+
+```bash 
+./seactl generate -v 3.4.0 -m production -o ./tmp/airgap -r localhost:3000 -d true
 ```

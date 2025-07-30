@@ -1,68 +1,105 @@
 package config
 
 import (
+	"archive/tar"
+	"bytes"
 	"errors"
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"log"
-	"os"
+	"os/exec"
+	"strings"
 )
 
-// Func ReadAirgapManifest from a input file, and return a AirgapManifest struct or an error if something goes wrong
-func ReadAirgapManifest(input string) (*AirgapManifest, error) {
+const (
+	// releaseMode factory url
+	factoryReleaseURL    = "registry.opensuse.org/isv/suse/edge/factory/test_manifest_images/release-manifest:%s"
+	productionReleaseURL = "registry.suse.com/edge/%s/release-manifest:%s"
+	releaseManifestPath  = "/release_manifest.yaml"
+	releaseImagesPath    = "/release_images.yaml"
+)
 
-	if _, err := os.Stat(input); os.IsNotExist(err) {
-		log.Printf("file does not exist: %s", input)
-		return nil, err
+// Func ReadAirgapManifest from a release-version and pull it from release container, and return a ReleaseManifest struct or an error if something goes wrong
+func ReadAirgapManifest(version, mode string) (*ReleaseManifest, *ImagesManifest, error) {
+
+	// Determine the input based on the mode
+	var input string
+	if mode == "factory" {
+		// Use the factory release URL to replace the param version content in %s inside factoryReleaseURL
+		input = fmt.Sprintf(factoryReleaseURL, version)
+	} else if mode == "production" {
+		// Use the production release URL to replace the param version content in %s inside productionReleaseURL
+		input = fmt.Sprintf(productionReleaseURL, strings.Join(strings.Split(version, ".")[:2], "."), version)
+	} else {
+		return nil, nil, errors.New("invalid release mode, must be either 'factory' or 'production'")
 	}
 
-	// Read file content
-	data, err := os.ReadFile(input)
+	// Read files content
+	releaseManifestData, err := extractFileFromContainer(input, releaseManifestPath)
 	if err != nil {
 		log.Printf("failed to read file: %v", err)
-		return nil, err
+		return nil, nil, err
+	}
+
+	releaseImagesData, err := extractFileFromContainer(input, releaseImagesPath)
+	if err != nil {
+		log.Printf("failed to read file: %v", err)
+		return nil, nil, err
 	}
 
 	// Unmarshal YAML into struct
-	var manifest AirgapManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
+	var releaseManifest ReleaseManifest
+	if err := yaml.Unmarshal(releaseManifestData, &releaseManifest); err != nil {
 		log.Printf("failed to unmarshal YAML: %v", err)
-		return nil, err
+		return nil, nil, err
+	}
+	var releaseImages ImagesManifest
+	if err := yaml.Unmarshal(releaseImagesData, &releaseImages); err != nil {
+		log.Printf("failed to unmarshal YAML: %v", err)
+		return nil, nil, err
 	}
 
-	// Validate the manifest
-	if err := validateAirgapManifest(&manifest); err != nil {
-		return nil, err
-	}
-
-	return &manifest, nil
-
+	return &releaseManifest, &releaseImages, nil
 }
 
-func validateAirgapManifest(manifest *AirgapManifest) error {
-	// Validate the manifest
-	if manifest.APIVersion == 0 {
-		log.Printf("apiVersion is missing or invalid")
-		return errors.New("apiVersion is missing or invalid")
+func extractFileFromContainer(imageURL, filePath string) ([]byte, error) {
+	// Pull image
+	if err := exec.Command("podman", "pull", imageURL).Run(); err != nil {
+		return nil, fmt.Errorf("failed to pull image: %s %w", imageURL, err)
 	}
-	if manifest.Components.Kubernetes.Rke2.Version == "" {
-		log.Printf("kubernetes rke2 version is missing")
-		return errors.New("kubernetes rke2 version is missing")
+
+	// Create container
+	containerIDRaw, err := exec.Command("podman", "create", imageURL).Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container: %w", err)
 	}
-	for i, helm := range manifest.Components.Helm {
-		if helm.Name == "" || helm.Version == "" || helm.Location == "" || helm.Namespace == "" {
-			log.Printf("helm %d has missing fields", i+1)
-			return errors.New("helm has missing fields")
+	containerID := strings.TrimSpace(string(containerIDRaw))
+
+	// Extract file using podman cp (into tar stream)
+	var buf bytes.Buffer
+	cmd := exec.Command("podman", "cp", fmt.Sprintf("%s:%s", containerID, filePath), "-")
+	cmd.Stdout = &buf
+	if err := cmd.Run(); err != nil {
+		exec.Command("podman", "rm", containerID).Run()
+		return nil, fmt.Errorf("failed to extract file: %s %w", filePath, err)
+	}
+
+	// Cleanup container
+	_ = exec.Command("podman", "rm", containerID).Run()
+
+	// Read TAR stream and extract file content
+	tarReader := tar.NewReader(&buf)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read tar header: %w", err)
 		}
-		if helm.Location != "" && helm.Location[:3] != "oci" {
-			log.Printf("helm %d location is not an OCI registry", i+1)
-			return errors.New("helm location is not an OCI registry")
+		if header.Typeflag == tar.TypeReg {
+			var fileContent bytes.Buffer
+			if _, err := fileContent.ReadFrom(tarReader); err != nil {
+				return nil, fmt.Errorf("failed to read file from tar: %w", err)
+			}
+			return fileContent.Bytes(), nil
 		}
 	}
-	for i, img := range manifest.Components.Images {
-		if img.Name == "" || img.Version == "" || img.Location == "" {
-			log.Printf("images %d has missing fields", i+1)
-			return errors.New("images has missing fields")
-		}
-	}
-	return nil
 }
