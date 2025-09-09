@@ -24,6 +24,8 @@ type Helm struct {
 	reg      *registry.Registry
 }
 
+var execCommand = exec.Command
+
 func New(name, version, chart, url string, reg *registry.Registry) *Helm {
 	return &Helm{
 		Name:    name,
@@ -55,7 +57,7 @@ func (h *Helm) Download() error {
 		}
 	}
 	// Execute the command
-	cmd := exec.Command("helm", args...)
+	cmd := execCommand("helm", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = nil
 
@@ -85,7 +87,7 @@ func (h *Helm) Upload() error {
 		args = append(args, "--ca-file", h.reg.RegistryCACert)
 	}
 
-	cmd := exec.Command("helm", args...)
+	cmd := execCommand("helm", args...)
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("failed to push to the registry: %s", err)

@@ -1,4 +1,7 @@
 # seactl (SUSE Edge Airgap Command Line Interface)
+
+![codecov](https://codecov.io/gh/alknopfler/seactl/branch/main/graph/badge.svg)
+
 SUSE Edge Airgap Tool created to make the airgap process easier for SUSE Edge for telco deployments.
 
 ## Features

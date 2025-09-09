@@ -21,6 +21,11 @@ type Images struct {
 	ImageRef v1.Image
 }
 
+var (
+	remoteImage = remote.Image
+	remoteWrite = remote.Write
+)
+
 func New(name string, reg *registry.Registry) *Images {
 	return &Images{
 		Name: name,
@@ -38,7 +43,7 @@ func (i *Images) Download() error {
 
 	fmt.Println(ref)
 
-	img, err := remote.Image(ref)
+	img, err := remoteImage(ref)
 	if err != nil {
 		log.Printf("pulling image %q: %v", img, err)
 		return err
@@ -66,7 +71,7 @@ func (i *Images) Upload() error {
 		return fmt.Errorf("getting remote options: %v", err)
 	}
 
-	err = remote.Write(ref, i.ImageRef, opts...)
+	err = remoteWrite(ref, i.ImageRef, opts...)
 	if err != nil {
 		return fmt.Errorf("pushing image %q: %v", i.ImageRef, err)
 	}

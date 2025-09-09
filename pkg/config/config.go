@@ -19,6 +19,8 @@ const (
 	releaseImagesPath    = "/release_images.yaml"
 )
 
+var execCommand = exec.Command
+
 // Func ReadAirgapManifest from a release-version and pull it from release container, and return a ReleaseManifest struct or an error if something goes wrong
 func ReadAirgapManifest(version, mode string) (*ReleaseManifest, *ImagesManifest, error) {
 
@@ -62,14 +64,14 @@ func ReadAirgapManifest(version, mode string) (*ReleaseManifest, *ImagesManifest
 	return &releaseManifest, &releaseImages, nil
 }
 
-func extractFileFromContainer(imageURL, filePath string) ([]byte, error) {
+var extractFileFromContainer = func(imageURL, filePath string) ([]byte, error) {
 	// Pull image
-	if err := exec.Command("podman", "pull", imageURL).Run(); err != nil {
+	if err := execCommand("podman", "pull", imageURL).Run(); err != nil {
 		return nil, fmt.Errorf("failed to pull image: %s %w", imageURL, err)
 	}
 
 	// Create container
-	containerIDRaw, err := exec.Command("podman", "create", imageURL).Output()
+	containerIDRaw, err := execCommand("podman", "create", imageURL).Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container: %w", err)
 	}
@@ -77,15 +79,15 @@ func extractFileFromContainer(imageURL, filePath string) ([]byte, error) {
 
 	// Extract file using podman cp (into tar stream)
 	var buf bytes.Buffer
-	cmd := exec.Command("podman", "cp", fmt.Sprintf("%s:%s", containerID, filePath), "-")
+	cmd := execCommand("podman", "cp", fmt.Sprintf("%s:%s", containerID, filePath), "-")
 	cmd.Stdout = &buf
 	if err := cmd.Run(); err != nil {
-		exec.Command("podman", "rm", containerID).Run()
+		execCommand("podman", "rm", containerID).Run()
 		return nil, fmt.Errorf("failed to extract file: %s %w", filePath, err)
 	}
 
 	// Cleanup container
-	_ = exec.Command("podman", "rm", containerID).Run()
+	_ = execCommand("podman", "rm", containerID).Run()
 
 	// Read TAR stream and extract file content
 	tarReader := tar.NewReader(&buf)
