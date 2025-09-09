@@ -12,6 +12,7 @@ import (
 
 const (
 	RKE2ReleaseURL = "https://github.com/rancher/rke2/releases/download/"
+	RKE2URL        = "https://get.rke2.io"
 )
 
 var (
@@ -31,12 +32,14 @@ var (
 type RKE2 struct {
 	Version          string
 	OutputDirTarball string
+	ReleaseURL       string
 }
 
 func New(version, outputDirTarball string) *RKE2 {
 	return &RKE2{
 		Version:          version,
 		OutputDirTarball: outputDirTarball,
+		ReleaseURL:       RKE2ReleaseURL,
 	}
 }
 
@@ -48,13 +51,13 @@ func (r *RKE2) Download() error {
 	}
 
 	// Download the install.sh script
-	if getFileFromURL("https://get.rke2.io", "install.sh", ensureTrailingSlash(r.OutputDirTarball)) != nil {
+	if getFileFromURL(RKE2URL, "install.sh", ensureTrailingSlash(r.OutputDirTarball)) != nil {
 		return fmt.Errorf("failed to download the install.sh script")
 	}
 
 	// Download the tarball files for the current release
 	for _, image := range listRKE2Images {
-		if getFileFromURL(RKE2ReleaseURL+replaceVersionLink(r.Version)+"/"+image, image, ensureTrailingSlash(r.OutputDirTarball)) != nil {
+		if getFileFromURL(r.ReleaseURL+replaceVersionLink(r.Version)+"/"+image, image, ensureTrailingSlash(r.OutputDirTarball)) != nil {
 			return fmt.Errorf("failed to download the file: %s", image)
 		}
 	}
@@ -62,7 +65,7 @@ func (r *RKE2) Download() error {
 }
 
 func (r *RKE2) Verify() error {
-	// verify if all images has been downloaded successfully
+	// verify if all images have been downloaded successfully
 	for _, image := range listRKE2Images {
 		filePath := filepath.Join(ensureTrailingSlash(r.OutputDirTarball), image)
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {

@@ -23,6 +23,11 @@ type Registry struct {
 	RegistryInsecure bool
 }
 
+var (
+	execCommand   = exec.Command
+	remoteCatalog = remote.Catalog
+)
+
 func New(registryAuthFile, registryURL, registryCACert string, insecure bool) *Registry {
 	return &Registry{
 		RegistryAuthFile: registryAuthFile,
@@ -48,7 +53,7 @@ func (r *Registry) RegistryHelmLogin() error {
 	} else if r.RegistryCACert != "" {
 		args = append(args, "--ca-file", r.RegistryCACert)
 	}
-	cmd := exec.Command("helm", args...)
+	cmd := execCommand("helm", args...)
 	err = cmd.Run()
 
 	if err != nil {
@@ -103,7 +108,7 @@ func (r *Registry) RegistryLogin() error {
 		return fmt.Errorf("invalid registry %q: %v", r.RegistryURL, err)
 	}
 
-	_, err = remote.Catalog(ctx, ref, remoteOpts, authOpts)
+	_, err = remoteCatalog(ctx, ref, remoteOpts, authOpts)
 	if err != nil {
 		return fmt.Errorf("error pinging registry %q: %v", r.RegistryURL, err)
 	}

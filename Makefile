@@ -12,4 +12,7 @@ compile:
 	GOOS=linux GOARCH=arm64 go build -o ${BINARY_NAME}-aarch64 .
 	#GOOS=freebsd GOARCH=386 go build -o ${BINARY_NAME} .
 
-all: build compile run
+test:
+	go test -v ./... -cover
+
+all: test build compile run
