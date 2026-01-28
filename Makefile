@@ -1,5 +1,5 @@
 BINARY_NAME=seactl
-VERSION ?= v1.3.0
+VERSION ?= 1.3.0
 LDFLAGS = -ldflags "-X main.version=$(VERSION)"
 
 build:
