@@ -4,14 +4,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
 	"github.com/alknopfler/seactl/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"log"
-	"net/http"
-	"os"
 )
 
 type Images struct {
@@ -60,10 +61,14 @@ func (i *Images) Verify() error {
 }
 
 func (i *Images) Upload() error {
-
-	ref, err := name.ParseReference(i.Name)
+	srcRef, err := name.ParseReference(i.Name)
 	if err != nil {
 		return fmt.Errorf("parsing reference %q: %v", i.Name, err)
+	}
+
+	ref, err := i.buildTargetReference(srcRef)
+	if err != nil {
+		return fmt.Errorf("building target reference for %q: %v", i.Name, err)
 	}
 
 	opts, err := i.getRemoteOpts()
@@ -71,6 +76,7 @@ func (i *Images) Upload() error {
 		return fmt.Errorf("getting remote options: %v", err)
 	}
 
+	log.Printf("pushing image to %s", ref.String())
 	err = remoteWrite(ref, i.ImageRef, opts...)
 	if err != nil {
 		return fmt.Errorf("pushing image %q: %v", i.ImageRef, err)
@@ -78,6 +84,20 @@ func (i *Images) Upload() error {
 
 	log.Printf("successfully pushed image %q", i.ImageRef)
 	return nil
+}
+
+func (i *Images) buildTargetReference(src name.Reference) (name.Reference, error) {
+	repoPath := src.Context().RepositoryStr()
+	targetRepo := fmt.Sprintf("%s/%s", i.reg.RegistryURL, repoPath)
+
+	switch ref := src.(type) {
+	case name.Tag:
+		return name.NewTag(fmt.Sprintf("%s:%s", targetRepo, ref.TagStr()), name.WeakValidation)
+	case name.Digest:
+		return name.NewDigest(fmt.Sprintf("%s@%s", targetRepo, ref.DigestStr()), name.WeakValidation)
+	default:
+		return name.ParseReference(targetRepo)
+	}
 }
 
 func (i *Images) getRemoteOpts() ([]remote.Option, error) {

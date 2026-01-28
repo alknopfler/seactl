@@ -1,0 +1,7 @@
+# Local build artifacts
+/seactl
+/seactl-aarch64
+/seactl-x86
+
+# OS files
+.DS_Store

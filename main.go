@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/cmd"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
+
+var version = "dev"
 
 func init() {
 
@@ -34,7 +37,10 @@ func newCommand() *cobra.Command {
 			cmd.Help()
 			os.Exit(0)
 		},
+		Version: version,
 	}
+
+	c.SetVersionTemplate("seactl version {{.Version}}\n")
 
 	c.AddCommand(cmd.NewAirGapCommand())
 

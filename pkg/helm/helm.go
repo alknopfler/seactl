@@ -2,12 +2,13 @@ package helm
 
 import (
 	"fmt"
-	"github.com/alknopfler/seactl/pkg/registry"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/alknopfler/seactl/pkg/registry"
 )
 
 const (
@@ -70,7 +71,8 @@ func (h *Helm) Download() error {
 }
 
 func (h *Helm) Verify() error {
-	if _, err := os.Stat(filepath.Join(tempDir, h.Name+"-"+h.Version+".tgz")); os.IsNotExist(err) {
+	_, err := h.findDownloadedChart()
+	if err != nil {
 		log.Printf("file does not exist to be verified %s", err.Error())
 		return err
 	}
@@ -78,8 +80,14 @@ func (h *Helm) Verify() error {
 }
 
 func (h *Helm) Upload() error {
+	chartPath, err := h.findDownloadedChart()
+	if err != nil {
+		log.Printf("file does not exist to be uploaded %s", err.Error())
+		return err
+	}
+
 	var args []string
-	args = append(args, "push", filepath.Join(tempDir, h.Name+"-"+h.Version+".tgz"), "oci://"+h.reg.RegistryURL)
+	args = append(args, "push", chartPath, "oci://"+h.reg.RegistryURL)
 
 	if h.Insecure {
 		args = append(args, "--insecure-skip-tls-verify")
@@ -88,11 +96,26 @@ func (h *Helm) Upload() error {
 	}
 
 	cmd := execCommand("helm", args...)
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		log.Printf("failed to push to the registry: %s", err)
 		return err
 	}
-	defer os.Remove(filepath.Join(tempDir, h.Name+"-"+h.Version+".tgz"))
+	defer os.Remove(chartPath)
 	return nil
+}
+
+func (h *Helm) findDownloadedChart() (string, error) {
+	pattern := fmt.Sprintf("%s*.tgz", h.Name)
+	matches, err := filepath.Glob(filepath.Join(tempDir, pattern))
+	if err != nil {
+		return "", err
+	}
+	if len(matches) == 0 {
+		return "", os.ErrNotExist
+	}
+	if len(matches) > 1 {
+		return "", fmt.Errorf("multiple chart archives found for %s", h.Name)
+	}
+	return matches[0], nil
 }

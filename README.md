@@ -62,6 +62,12 @@ Flags:
 -v, --release-version string     Release version, e.g. 3.4.0 (X.Y.Z)
 ```
 
+Check the installed version:
+
+```bash
+seactl --version
+```
+
 ## Example of usage
 
 ```bash
@@ -75,3 +81,17 @@ seactl generate -v 3.4.0 -m production -o /tmp/airgap -a registry-auth.txt -r my
 ```bash 
 ./seactl generate -v 3.4.0 -m production -o ./tmp/airgap -r localhost:3000 -d true
 ```
+
+## Developer
+
+### Versioning
+
+- Update the version in the Makefile variable `VERSION` only.
+- Build with `make build` or `make compile` to inject the version into the binary.
+- Create a git tag with `make tag` (uses `v$(VERSION)`).
+
+Follow semantic versioning for every change:
+
+- Patch: bug fixes, no breaking changes.
+- Minor: new features, backward compatible.
+- Major: breaking changes.
