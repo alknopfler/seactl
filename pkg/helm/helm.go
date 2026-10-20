@@ -79,9 +79,6 @@ func (h *Helm) Download() error {
 		logger.Debugf("Executing command: helm %s\n", strings.Join(args, " "))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-	} else {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = nil
 	}
 
 	if err := cmd.Run(); err != nil {

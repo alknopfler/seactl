@@ -77,6 +77,24 @@ Flags:
 -m, --release-mode string        Release mode, can be 'factory' or 'production' (default "factory"). Only used if release-version is provided.
 -v, --release-version string     Release version, e.g. 3.4.0 (X.Y.Z). Start Binary Mode if provided.
     --debug                      Debug mode with more logs verbosity
+    --skip-rke2                  Skip downloading and verifying RKE2 artifacts
+    --skip-helm                  Skip downloading and uploading Helm chart artifacts
+    --skip-images                Skip downloading and uploading image artifacts
+```
+
+### Skipping Artifact Types
+
+The `--skip-rke2`, `--skip-helm` and `--skip-images` flags are optional and independent of each other. Use them to re-run the tool against only a subset of the artifacts, for example when a previous run already mirrored the RKE2 artifacts and images successfully, and only some Helm charts need to be retried:
+
+```bash
+seactl mirror \
+  -v 3.4.0 -m production \
+  -o /tmp/airgap \
+  -a registry-auth.txt \
+  -r myregistry:5000 \
+  --rancher-apps-authfile rancher-auth.txt \
+  --skip-rke2 \
+  --skip-images
 ```
 
 ## Modes of Operation
@@ -193,6 +211,42 @@ seactl mirror \
   -r myregistry:5000 \
   --rancher-apps-authfile rancher-auth.txt
 ```
+
+## Example Output
+
+RKE2, Helm charts and images are mirrored concurrently, so their log lines are prefixed with `[RKE2]`, `[HELM]` or `[IMAGES]` to tell them apart. Every line that reports an outcome is laid out in three tab-separated columns — `tag`, status symbol (`✔` success, `✖` error, `⊘` skipped), message — padded so the symbol always lands in the same column across all three phases. A final `▶ Summary` block is printed once every phase finishes. Success lines are printed in green, skips in yellow and errors in red (not visible below, since this is plain markdown). Timestamps are omitted by default to keep this readable; pass `--debug` to get them back along with extra diagnostic logging:
+
+```text
+successfully authenticated to registry "myregistry:5000"
+successfully logged in to the helm registry dp.apps.rancher.io
+successfully logged in to the helm registry myregistry:5000
+[RKE2] File rke2-images.linux-amd64.tar.zst downloaded successfully to /tmp/airgap/rke2-images.linux-amd64.tar.zst
+[IMAGES] successfully pulled image "registry.suse.com/edge/3.4/rancher:v2.9.5"
+[HELM]      ✔    Helm chart sriov-network-operator prepared and uploaded successfully!
+[RKE2] Image verified successfully: /tmp/airgap/rke2-images.linux-amd64.tar.zst
+[IMAGES] pushing image to myregistry:5000/mirror/rancher:v2.9.5
+[HELM]      ✔    Helm chart sriov-crd prepared and uploaded successfully!
+[IMAGES] successfully pushed image "registry.suse.com/edge/3.4/rancher:v2.9.5"
+[IMAGES]    ✔    Image registry.suse.com/edge/3.4/rancher:v2.9.5 prepared and uploaded successfully!
+[HELM]      ⊘    Skipping chart oci://registry.suse.com/private-registry/private-registry-helm because --suse-private-registry-authfile was not provided
+[RKE2]      ✔    RKE2 Images downloaded and verified successfully! you can find them in: /tmp/airgap
+[HELM]      ✔    Helm Chart artifacts pre-loaded in registry successfully!
+[IMAGES]    ✔    Images artifacts pre-loaded in registry successfully!
+▶ Summary
+[RKE2]      ✔    1 succeeded
+[HELM]      ✔    13 succeeded, 1 skipped
+[IMAGES]    ✔    54 succeeded
+Duration:        2m14s
+```
+
+On failure, the step that stopped the run is printed in red right where it happened, and the final error is printed once more and the process exits with a non-zero status, for example:
+
+```text
+[HELM]      ✖    failed to download chart sriov-network-operator: exit status 1
+[ERROR]     ✖    failed to download chart sriov-network-operator: exit status 1
+```
+
+Raw `helm` command output (`helm pull`/`helm push`) is also suppressed by default; `--debug` shows it too. No `▶ Summary` is printed when a phase fails, since the run stops at the first fatal error.
 
 ## Developer
 
