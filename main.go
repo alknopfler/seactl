@@ -6,6 +6,7 @@ import (
 
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/seactl/cmd"
+	"github.com/alknopfler/seactl/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,7 @@ func init() {
 func main() {
 	command := newCommand()
 	if err := command.Execute(); err != nil {
-		log.Fatalf(color.InRed("[ERROR] %s"), err.Error())
+		log.Fatalf(color.InRed(logger.StatusFmt("[ERROR]", "✖", "%s")), err.Error())
 	}
 }
 

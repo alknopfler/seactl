@@ -28,6 +28,9 @@ var (
 		registryCACert      string
 		outputDir           string
 		registryInsecure    bool
+		skipRke2            bool
+		skipHelm            bool
+		skipImages          bool
 	}
 )
 
@@ -39,6 +42,7 @@ func fakeCheckHelm() error {
 
 func fakeGenerate(
 	dryRun bool, rv, rm, url, auth, rancherAuth, susePrivateRegistryAuth, cacert, out string, insecure bool,
+	skipRke2, skipHelm, skipImages bool,
 ) error {
 	generateParams = struct {
 		dryRun              bool
@@ -51,7 +55,10 @@ func fakeGenerate(
 		registryCACert      string
 		outputDir           string
 		registryInsecure    bool
-	}{dryRun, rv, rm, url, auth, rancherAuth, susePrivateRegistryAuth, cacert, out, insecure}
+		skipRke2            bool
+		skipHelm            bool
+		skipImages          bool
+	}{dryRun, rv, rm, url, auth, rancherAuth, susePrivateRegistryAuth, cacert, out, insecure, skipRke2, skipHelm, skipImages}
 	return generateErr
 }
 
@@ -145,6 +152,9 @@ func TestGenerate_Success(t *testing.T) {
 		registryCACert      string
 		outputDir           string
 		registryInsecure    bool
+		skipRke2            bool
+		skipHelm            bool
+		skipImages          bool
 	}{}
 
 	stdout, stderr, err := runCommand([]string{
@@ -175,6 +185,44 @@ func TestGenerate_Success(t *testing.T) {
 	assert.Equal(t, "out", generateParams.outputDir)
 	assert.True(t, generateParams.dryRun)
 	assert.True(t, generateParams.registryInsecure)
+	assert.False(t, generateParams.skipRke2)
+	assert.False(t, generateParams.skipHelm)
+	assert.False(t, generateParams.skipImages)
+}
+
+func TestGenerate_SkipFlags(t *testing.T) {
+	helmCalled = false
+	generateParams = struct {
+		dryRun              bool
+		releaseVersion      string
+		releaseMode         string
+		registryURL         string
+		registryAuthFile    string
+		rancherAppsAuthFile string
+		susePrivateRegistryAuthFile string
+		registryCACert      string
+		outputDir           string
+		registryInsecure    bool
+		skipRke2            bool
+		skipHelm            bool
+		skipImages          bool
+	}{}
+
+	stdout, stderr, err := runCommand([]string{
+		"--registry-url", "reg",
+		"--rancher-apps-authfile", "rancher-auth",
+		"--output", "out",
+		"--skip-rke2",
+		"--skip-images",
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, "", stdout)
+	assert.Equal(t, "", stderr)
+
+	assert.True(t, generateParams.skipRke2)
+	assert.False(t, generateParams.skipHelm)
+	assert.True(t, generateParams.skipImages)
 }
 
 func TestContainerMode_Success(t *testing.T) {
@@ -191,6 +239,9 @@ func TestContainerMode_Success(t *testing.T) {
 		registryCACert      string
 		outputDir           string
 		registryInsecure    bool
+		skipRke2            bool
+		skipHelm            bool
+		skipImages          bool
 	}{}
 
 	stdout, stderr, err := runCommand([]string{

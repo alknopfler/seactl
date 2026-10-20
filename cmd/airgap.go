@@ -20,12 +20,19 @@ var (
 	outputDirTarball    string
 	dryRun              bool
 	debug               bool
+	skipRke2            bool
+	skipHelm            bool
+	skipImages          bool
 )
 
 func NewAirGapCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "mirror",
 		Short: "Command to mirror the air-gap artifacts from the airgap manifest",
+		Example: `  # Re-run only the Helm charts after fixing a failed chart, skipping RKE2 and images
+  seactl mirror -v 3.4.0 -m production -o /tmp/airgap -a registry-auth.txt \
+    -r myregistry:5000 --rancher-apps-authfile rancher-auth.txt \
+    --skip-rke2 --skip-images`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set global debug flag
 			logger.Debug = debug
@@ -56,6 +63,7 @@ func NewAirGapCommand() *cobra.Command {
 				dryRun, releaseVersion, releaseMode,
 				registryURL, registryAuthFile, rancherAppsAuthFile, susePrivateRegistryAuthFile, registryCACert,
 				outputDirTarball, registryInsecure,
+				skipRke2, skipHelm, skipImages,
 			)
 		},
 	}
@@ -72,6 +80,9 @@ func NewAirGapCommand() *cobra.Command {
 	flags.StringVarP(&outputDirTarball, "output", "o", "", "Output directory for tarball files")
 	flags.BoolVarP(&dryRun, "dry-run", "d", false, "Dry run mode")
 	flags.BoolVar(&debug, "debug", false, "Enable debug logging")
+	flags.BoolVar(&skipRke2, "skip-rke2", false, "Skip downloading and verifying RKE2 artifacts")
+	flags.BoolVar(&skipHelm, "skip-helm", false, "Skip downloading and uploading Helm chart artifacts")
+	flags.BoolVar(&skipImages, "skip-images", false, "Skip downloading and uploading image artifacts")
 
 	// Required flags
 	c.MarkFlagRequired("output")

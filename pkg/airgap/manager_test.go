@@ -1,7 +1,10 @@
 package airgap
 
 import (
+	"bytes"
 	"errors"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/alknopfler/seactl/pkg/config"
@@ -49,7 +52,7 @@ func TestGenerateAirGapEnvironment_DryRun(t *testing.T) {
 		return fakeReleaseManifest()
 	}
 
-	err := GenerateAirGapEnvironment(true, "v1.0.0", "factory", "url", "auth", "rancher-auth", "suse-auth", "ca", "/tmp", true)
+	err := GenerateAirGapEnvironment(true, "v1.0.0", "factory", "url", "auth", "rancher-auth", "suse-auth", "ca", "/tmp", true, false, false, false)
 	assert.NoError(t, err)
 }
 
@@ -57,25 +60,85 @@ func TestGenerateAirGapEnvironment_ErrorFromManifest(t *testing.T) {
 	ReadAirgapManifestFunc = func(version, mode string) (*config.ReleaseManifest, *config.ImagesManifest, error) {
 		return nil, nil, errors.New("failed manifest")
 	}
-	err := GenerateAirGapEnvironment(true, "v1.0.0", "factory", "auth", "auth", "rancher-auth", "suse-auth", "ca", "/tmp", true)
+	err := GenerateAirGapEnvironment(true, "v1.0.0", "factory", "auth", "auth", "rancher-auth", "suse-auth", "ca", "/tmp", true, false, false, false)
 	assert.Error(t, err)
 }
 
 func TestGenerateRKE2Artifacts_NotDryRun(t *testing.T) {
 	manifest, _, _ := fakeReleaseManifest()
-	err := generateRKE2Artifacts(false, manifest, "/tmp")
+	_, err := generateRKE2Artifacts(false, manifest, "/tmp")
 	assert.Error(t, err)
 }
 
 func TestGenerateHelmArtifacts_NotDryRun(t *testing.T) {
 	manifest, _, _ := fakeReleaseManifest()
-	err := generateHelmArtifacts(false, manifest, &registry.Registry{}, &registry.Registry{}, nil)
+	_, err := generateHelmArtifacts(false, manifest, &registry.Registry{}, &registry.Registry{}, nil)
 	assert.Error(t, err)
+}
+
+func TestGenerateHelmArtifacts_DependencyAndAddonCharts_DryRun(t *testing.T) {
+	manifest := &config.ReleaseManifest{}
+	manifest.Spec.Components.Workloads.Helm = []struct {
+		PrettyName  string "yaml:\"prettyName\""
+		ReleaseName string "yaml:\"releaseName\""
+		Chart       string "yaml:\"chart\""
+		Version     string "yaml:\"version\""
+		Repository  string "yaml:\"repository,omitempty\""
+		Values      struct {
+			PostDelete struct {
+				Enabled bool "yaml:\"enabled\""
+			} "yaml:\"postDelete\""
+		} "yaml:\"values,omitempty\""
+		DependencyCharts []struct {
+			ReleaseName string "yaml:\"releaseName\""
+			Chart       string "yaml:\"chart\""
+			Version     string "yaml:\"version\""
+			Repository  string "yaml:\"repository\""
+		} "yaml:\"dependencyCharts,omitempty\""
+		AddonCharts []struct {
+			ReleaseName string "yaml:\"releaseName\""
+			Chart       string "yaml:\"chart\""
+			Version     string "yaml:\"version\""
+		} "yaml:\"addonCharts,omitempty\""
+	}{
+		{
+			ReleaseName: "sriov-network-operator",
+			Chart:       "oci://repo/sriov-network-operator",
+			Version:     "1.0.0",
+			DependencyCharts: []struct {
+				ReleaseName string "yaml:\"releaseName\""
+				Chart       string "yaml:\"chart\""
+				Version     string "yaml:\"version\""
+				Repository  string "yaml:\"repository\""
+			}{
+				{ReleaseName: "sriov-crd", Chart: "oci://repo/sriov-crd", Version: "1.0.0"},
+			},
+			AddonCharts: []struct {
+				ReleaseName string "yaml:\"releaseName\""
+				Chart       string "yaml:\"chart\""
+				Version     string "yaml:\"version\""
+			}{
+				{ReleaseName: "sriov-addon", Chart: "oci://repo/sriov-addon", Version: "1.0.0"},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(os.Stderr)
+
+	result, err := generateHelmArtifacts(true, manifest, &registry.Registry{}, &registry.Registry{}, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, result.Succeeded)
+	assert.Equal(t, 0, result.Skipped)
+	assert.Contains(t, buf.String(), "oci://repo/sriov-network-operator")
+	assert.Contains(t, buf.String(), "oci://repo/sriov-crd")
+	assert.Contains(t, buf.String(), "oci://repo/sriov-addon")
 }
 
 func TestGenerateImagesArtifacts_NotDryRun(t *testing.T) {
 	_, imagesManifest, _ := fakeReleaseManifest()
-	err := generateImagesArtifacts(false, imagesManifest, &registry.Registry{}, &registry.Registry{}, nil)
+	_, err := generateImagesArtifacts(false, imagesManifest, &registry.Registry{}, &registry.Registry{}, nil)
 	assert.Error(t, err)
 }
 
